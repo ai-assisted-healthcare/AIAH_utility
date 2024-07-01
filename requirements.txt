@@ -1,0 +1,12 @@
+isort 
+black 
+flake8
+scipy
+numpy
+tqdm
+SimpleITK
+pandas
+ipywidgets
+matplotlib
+torch
+monai
