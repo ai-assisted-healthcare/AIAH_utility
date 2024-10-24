@@ -9,9 +9,10 @@
 </div>
 
 ## Container for:
-- Nifti Stitching
-- 3D Image Viewing
 - Dicom Reading
+- Image Stitching
+- 3D Image Viewing
+
 
 ## Installation
 
@@ -22,26 +23,43 @@ python -m pip install -e .
 ```
 ## Usage
 
-### Viewing
+
+### Read, Stitch & View Dicom
 ```python
+import SimpleITK as sitk
+from AIAH_utility.dicom_io import read_dicom_series_zipped
+from AIAH_utility.stitching import stitch_images
+from AIAH_utility.viewer import BasicViewer
+
+imgs, _manifest =  read_dicom_series_zipped("dicom.zip")
+stitched_image = stitch_images(imgs)
+
+stitched_image_np = sitk.GetArrayFromImage(stitched_image)
+BasicViewer(stitched_image_np).show()
+```
+
+### View Nifti with Segmentation Map
+
+```python
+from monai.transforms import LoadImage
 from AIAH_utility.viewer import BasicViewer, ListViewer
-from monai.transforms import LoadImage()
 
 img = LoadImage()("image.nii.gz")
 seg = LoadImage()("segmentation.nii.gz")
 
+# Single Image
 BasicViewer(img,seg).show()
+
+# Multiple Images
+ListViewer(
+    [img1,img2, ...],
+    [seg1,seg2, ...],
+    figsize = (5,5),
+    start_view = 0,
+    cmap ="Greys_r"
+).show()
 ```
 
-### Stitching
-```python
-from AIAH_utility.stitching import stitch_images
-import SimpleITK as sitk
+![ListViewer Example Image](images/ListViewer_Example.png)
 
-img1 = sitk.ReadImage("image1.nii.gz")
-img2 = sitk.ReadImage("image2.nii.gz")
-img3 = sitk.ReadImage("image3.nii.gz")
-
-stitched_image = stitch_images([img1,img2,img3])
-```
 
