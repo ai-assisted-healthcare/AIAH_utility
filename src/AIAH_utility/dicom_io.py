@@ -30,7 +30,9 @@ import SimpleITK as sitk
 from tqdm.autonotebook import tqdm
 
 
-def read_dicom_series(directory: Union[str, Path], pbar_position=0) -> (List[sitk.Image], List[str]):
+def read_dicom_series(
+    directory: Union[str, Path], pbar_position=0, disable_pbar: bool = False
+) -> (List[sitk.Image], List[str]):
     """
     This function reads one or multiple DICOM series from a directory and returns
         the resulting 3D image/s.
@@ -52,7 +54,9 @@ def read_dicom_series(directory: Union[str, Path], pbar_position=0) -> (List[sit
     except FileNotFoundError:
         series_desc = []
     images = []
-    for idx in tqdm(series_ids, postfix="Reading multiple DICOM Series", leave=False, position=pbar_position):
+    for idx in tqdm(
+        series_ids, postfix="Reading multiple DICOM Series", leave=False, position=pbar_position, disable=disable_pbar
+    ):
         file_names = reader.GetGDCMSeriesFileNames(directory, idx)
         reader.SetFileNames(file_names)
         image = reader.Execute()
@@ -60,7 +64,9 @@ def read_dicom_series(directory: Union[str, Path], pbar_position=0) -> (List[sit
     return images, series_desc
 
 
-def read_dicom_series_zipped(file: Union[str, Path], pbar_position=0) -> (List[sitk.Image], List[str]):
+def read_dicom_series_zipped(
+    file: Union[str, Path], pbar_position=0, disable_pbar: bool = False
+) -> (List[sitk.Image], List[str]):
     """
     Reads One or multiple DICOM series from a zip file.
 
@@ -76,10 +82,10 @@ def read_dicom_series_zipped(file: Union[str, Path], pbar_position=0) -> (List[s
             for name in zip_file.namelist():
                 *parents, fn = name.split("/")
                 zip_file.extract(name, temp_dir)
-        return read_dicom_series(Path(temp_dir).joinpath(*parents), pbar_position)
+        return read_dicom_series(Path(temp_dir).joinpath(*parents), pbar_position, disable_pbar)
 
 
-def read_dicom_series_zipped_parallel(zip_file_paths: List[str], n_cpu: int):
+def read_dicom_series_zipped_parallel(zip_file_paths: List[str], n_cpu: int, disable_pbar: bool = False):
     """
     Converts all DICOM series in a list of zip files to compressed NRRD volumes.
 
@@ -87,7 +93,12 @@ def read_dicom_series_zipped_parallel(zip_file_paths: List[str], n_cpu: int):
     """
     images = []
     with Pool(processes=n_cpu) as pool:
-        for im in tqdm(pool.imap_unordered(read_dicom_series_zipped, zip_file_paths), total=len(zip_file_paths)):
+        for im in tqdm(
+            pool.imap_unordered(read_dicom_series_zipped, zip_file_paths),
+            total=len(zip_file_paths),
+            leave=False,
+            disable=disable_pbar,
+        ):
             images.append(im)
     return images
 

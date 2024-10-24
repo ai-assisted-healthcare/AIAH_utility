@@ -385,6 +385,7 @@ def stitch_images(
     translate: bool = False,
     gaus: bool = True,
     is_label: bool = False,
+    disable_pbar: bool = False,
 ) -> List[sitk.Image]:
     """
     Combine a list of images into a single large image with isotropnic spacing
@@ -404,10 +405,39 @@ def stitch_images(
 
     isotrophic_images = [
         resample_to_isotropic(img, new_spacing=new_spacing, is_label=is_label)
-        for img in tqdm(images, postfix="Resampling Series")
+        for img in tqdm(images, postfix="Resampling Series", leave=False, disable=disable_pbar)
     ]
 
     fixed_image, *moving_images = isotrophic_images
-    for moving in tqdm(moving_images, postfix="Stitching Series"):
+    for moving in tqdm(moving_images, postfix="Stitching Series", leave=False, disable=disable_pbar):
         fixed_image = stitch_two_images(fixed_image, moving, translate, gaus, is_label)
     return fixed_image
+
+
+def unstitch(stitched_image: sitk.Image, target_image: sitk.Image, is_label: bool = False) -> sitk.Image:
+    """Extract a target region from a stitched image
+     Args:
+        stitched_image: large SimpleITK image.
+        target_image: area within the stitched image.
+    Returns:
+        Extracted SimpleITK image.
+    """
+
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetOutputSpacing(target_image.GetSpacing())
+    resampler.SetSize(target_image.GetSize())
+    resampler.SetOutputDirection(target_image.GetDirection())
+    resampler.SetOutputOrigin(target_image.GetOrigin())
+    resampler.SetTransform(sitk.Transform())
+
+    if no_negative_intensities(stitched_image):
+        resampler.SetDefaultPixelValue(0)
+    else:
+        resampler.SetDefaultPixelValue(stitched_image.GetPixelIDValue())
+
+    if is_label:
+        resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+    else:
+        resampler.SetInterpolator(sitk.sitkLinear)
+
+    return resampler.Execute(stitched_image)
