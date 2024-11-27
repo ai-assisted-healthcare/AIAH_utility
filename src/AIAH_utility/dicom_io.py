@@ -20,7 +20,7 @@ Functions for reading and writing medical images in various formats
 import tempfile
 import zipfile
 from multiprocessing import Pool
-from os.path import join
+from os.path import isfile, join
 from pathlib import Path
 from typing import List, Union
 
@@ -48,11 +48,21 @@ def read_dicom_series(
     directory = str(directory)
     reader = sitk.ImageSeriesReader()
     series_ids = reader.GetGDCMSeriesIDs(directory)
-    try:
+
+    # check if manifest exists
+    if isfile(join(directory, "manifest.csv")):
+        manifest = pd.read_csv(join(directory, "manifest.csv"))
+    elif isfile(join(directory, "manifest.cvs")):  # spelling mistak in UKBB
         manifest = pd.read_csv(join(directory, "manifest.cvs"))
+    else:
+        manifest = None
+
+    # read series description
+    if manifest is not None:
         series_desc = [manifest.loc[manifest["seriesid"] == sid]["series discription"].iloc[0] for sid in series_ids]
-    except FileNotFoundError:
+    else:
         series_desc = []
+
     images = []
     for idx in tqdm(
         series_ids, postfix="Reading multiple DICOM Series", leave=False, position=pbar_position, disable=disable_pbar

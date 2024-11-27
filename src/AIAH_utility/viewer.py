@@ -89,9 +89,7 @@ def _create_togglebutton(description: str, value: int, **kwargs) -> ipywidgets.w
     return button
 
 
-def _create_dropdown(
-    description: str, value: int, options: list[Union[str, int]], **kwargs
-) -> ipywidgets.widgets.Dropdown:
+def _create_dropdown(description: str, value: int, options, **kwargs) -> ipywidgets.widgets.Dropdown:
     """Create dropdown widget"""
     dropdown = widgets.Dropdown(
         description=description,
