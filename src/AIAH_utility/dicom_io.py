@@ -30,6 +30,30 @@ import SimpleITK as sitk
 from tqdm.autonotebook import tqdm
 
 
+def read_series_description(dicom_dir: Union[str, Path], series_ids: List[str] = None) -> List[str]:
+    """Return list of series descriptions sorted by given series ids.
+    Id series ids are NONE, return unsored_series descriptions.
+    """
+
+    # read manifest.csv
+    if isfile(join(dicom_dir, "manifest.csv")):
+        manifest = pd.read_csv(join(dicom_dir, "manifest.csv"))
+    elif isfile(join(dicom_dir, "manifest.cvs")):  # spelling mistak in UKBB
+        manifest = pd.read_csv(join(dicom_dir, "manifest.cvs"))
+    else:
+        manifest = None
+
+    # read series description
+    if manifest is not None:
+        if series_ids is None:
+            series_ids = list(manifest["seriesid"].unique())
+        series_desc = [manifest.loc[manifest["seriesid"] == sid]["series discription"].iloc[0] for sid in series_ids]
+    else:
+        series_desc = []
+
+    return series_desc
+
+
 def read_dicom_series(
     directory: Union[str, Path], pbar_position=0, disable_pbar: bool = False
 ) -> (List[sitk.Image], List[str]):
@@ -48,20 +72,7 @@ def read_dicom_series(
     directory = str(directory)
     reader = sitk.ImageSeriesReader()
     series_ids = reader.GetGDCMSeriesIDs(directory)
-
-    # check if manifest exists
-    if isfile(join(directory, "manifest.csv")):
-        manifest = pd.read_csv(join(directory, "manifest.csv"))
-    elif isfile(join(directory, "manifest.cvs")):  # spelling mistak in UKBB
-        manifest = pd.read_csv(join(directory, "manifest.cvs"))
-    else:
-        manifest = None
-
-    # read series description
-    if manifest is not None:
-        series_desc = [manifest.loc[manifest["seriesid"] == sid]["series discription"].iloc[0] for sid in series_ids]
-    else:
-        series_desc = []
+    series_desc = read_series_description(directory, series_ids)
 
     images = []
     for idx in tqdm(
@@ -72,6 +83,16 @@ def read_dicom_series(
         image = reader.Execute()
         images.append(image)
     return images, series_desc
+
+
+def read_series_description_zipped(file: Union[str, Path], series_ids: List[str] = None) -> List[str]:
+    """Return list of series descriptions"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with zipfile.ZipFile(file, "r") as zip_file:
+            for name in zip_file.namelist():
+                *parents, fn = name.split("/")
+                zip_file.extract(name, temp_dir)
+        return read_series_description(Path(temp_dir).joinpath(*parents), series_ids)
 
 
 def read_dicom_series_zipped(

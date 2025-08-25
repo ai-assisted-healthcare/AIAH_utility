@@ -128,11 +128,12 @@ class BasicViewer:
         prediction: Optional[str] = None,
         description: Optional[str] = None,
         figsize: Tuple[int, int] = (4, 4),
-        cmap: Optional[str] = "bone",
+        cmap: Optional[str] = "Greys_r",
         mask_alpha: float = 0.25,
         background_threshold: float = 0.05,
         mode: Optional[str] = None,
         laplace: bool = True,
+        init_px_range: Tuple[int, int] = None,
     ):
         x = self._ensure_correct_dims(convert_to_numpy(x))
 
@@ -162,6 +163,7 @@ class BasicViewer:
         self.background_threshold = background_threshold
         self.mode = mode
         self.laplace = laplace
+        self.init_px_range = init_px_range
 
     def _plot_slice(self, im_slice: int, with_mask: bool, px_range: Tuple[int, int], view: int) -> None:
         """Plot slice of image"""
@@ -250,7 +252,7 @@ class BasicViewer:
         range_slider = _create_slider(
             slider_min=self.x.min(),
             slider_max=self.x.max(),
-            value=[self.x.min(), self.x.max()],
+            value=self.init_px_range if (self.init_px_range is not None) else [self.x.min(), self.x.max()],
             slider_type=("FloatRangeSlider" if issubclass(self.x.dtype.type, np.floating) else "IntRangeSlider"),
             step=0.01 if issubclass(self.x.dtype.type, np.floating) else 1,
             readout=True,
@@ -452,10 +454,12 @@ class ListViewer:
         prediction: Optional[List[str]] = None,
         description: Optional[List[str]] = None,
         figsize: Tuple[int, int] = (4, 4),
-        cmap: Optional[str] = "bone",
+        cmap: Optional[str] = "Greys_r",
+        mask_alpha: float = 0.25,
         max_n: int = 9,
         mode: Optional[str] = None,
         laplace: bool = True,
+        init_px_range: Tuple[int, int] = None,
     ):
         x = ensure_tuple(x, wrap_array=True)
         self.slice_range = (1, len(x))
@@ -473,9 +477,11 @@ class ListViewer:
         self.description = description
         self.figsize = figsize
         self.cmap = cmap if mode != "RGB" else None
+        self.mask_alpha = mask_alpha
         self.max_n = max_n
         self.mode = mode
         self.laplace = laplace
+        self.init_px_range = init_px_range
 
     def _generate_views(self) -> None:
         """Arranges and prepares all ipywidgets for presentation"""
@@ -497,8 +503,10 @@ class ListViewer:
                     description=description,
                     figsize=self.figsize,
                     cmap=self.cmap,
+                    mask_alpha=self.mask_alpha,
                     mode=self.mode,
                     laplace=self.laplace,
+                    init_px_range=self.init_px_range,
                 ).image_box
             )
 
