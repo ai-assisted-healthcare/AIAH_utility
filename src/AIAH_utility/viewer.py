@@ -116,6 +116,7 @@ class BasicViewer:
         background_threshold: Values below this are shown as fully transparent
         mode: if `RGB` a three channel 2D image is plotted as 2d color image. Otherwise ignored
         laplace: outline edges of label mask
+        init_px_range: Initial windowing level
         edge_thickness: thickness of edges, starts at 0
     Returns:
         Instance of BasicViewer
@@ -449,28 +450,21 @@ class ListViewer:
     Arguments:
         x: Tensor objects to view
         y: Tensor objects (in case of segmentation task) or class labels as string.
-        prediction: Class predictions
-        description: description of the whole image
-        figsize: size of image, passed as plotting argument
-        cmap: colormap for display of `x`
+        prediction:class predictions for each image
+        description: description of each image
         max_n: maximum number of items to display
-        laplace: outline edges of label mask
+        kwargs: see BasicViewer
+
     """
 
     def __init__(
         self,
         x: Union[List[NdarrayOrTensor], Tuple],
         y: Optional[List[Union[NdarrayOrTensor, str]]] = None,
-        start_view: Optional[int] = 2,
         prediction: Optional[List[str]] = None,
         description: Optional[List[str]] = None,
-        figsize: Tuple[int, int] = (4, 4),
-        cmap: Optional[str] = "Greys_r",
-        mask_alpha: float = 0.25,
         max_n: int = 9,
-        mode: Optional[str] = None,
-        laplace: bool = True,
-        init_px_range: Tuple[int, int] = None,
+        **kwargs,
     ):
         x = ensure_tuple(x, wrap_array=True)
         self.slice_range = (1, len(x))
@@ -483,16 +477,10 @@ class ListViewer:
 
         self.x = x
         self.y = y
-        self.start_view = start_view
         self.prediction = prediction
         self.description = description
-        self.figsize = figsize
-        self.cmap = cmap if mode != "RGB" else None
-        self.mask_alpha = mask_alpha
         self.max_n = max_n
-        self.mode = mode
-        self.laplace = laplace
-        self.init_px_range = init_px_range
+        self.kwargs = kwargs
 
     def _generate_views(self) -> None:
         """Arranges and prepares all ipywidgets for presentation"""
@@ -509,15 +497,9 @@ class ListViewer:
                 BasicViewer(
                     x=image,
                     y=mask,
-                    start_view=self.start_view,
                     prediction=prediction,
                     description=description,
-                    figsize=self.figsize,
-                    cmap=self.cmap,
-                    mask_alpha=self.mask_alpha,
-                    mode=self.mode,
-                    laplace=self.laplace,
-                    init_px_range=self.init_px_range,
+                    **self.kwargs,
                 ).image_box
             )
 
