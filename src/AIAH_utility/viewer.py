@@ -116,6 +116,7 @@ class BasicViewer:
         background_threshold: Values below this are shown as fully transparent
         mode: if `RGB` a three channel 2D image is plotted as 2d color image. Otherwise ignored
         laplace: outline edges of label mask
+        edge_thickness: thickness of edges, starts at 0
     Returns:
         Instance of BasicViewer
     """
@@ -134,6 +135,7 @@ class BasicViewer:
         mode: Optional[str] = None,
         laplace: bool = True,
         init_px_range: Tuple[int, int] = None,
+        edge_thickness: int = 0,
     ):
         x = self._ensure_correct_dims(convert_to_numpy(x))
 
@@ -164,6 +166,7 @@ class BasicViewer:
         self.mode = mode
         self.laplace = laplace
         self.init_px_range = init_px_range
+        self.edge_thickness = edge_thickness
 
     def _plot_slice(self, im_slice: int, with_mask: bool, px_range: Tuple[int, int], view: int) -> None:
         """Plot slice of image"""
@@ -202,12 +205,20 @@ class BasicViewer:
                     _slice = image_slice.copy()
                     _slice[_slice != i] = 0
                     edges = ndimage.laplace(_slice)
-                    edge_slice[edges != 0] = i
+                    edges_binary = edges != 0
 
-                cmap = mpl.cm.jet(np.linspace(0, 1, int(self.y.max())))
-                cmap -= 0.4
-                cmap = cmap.clip(0, 1)
-                cmap = mpl.colors.ListedColormap(cmap)
+                    if self.edge_thickness > 0:
+                        edges_binary = ndimage.binary_dilation(edges_binary, iterations=self.edge_thickness)
+
+                    edge_slice[edges_binary] = i
+
+                if self.mask_alpha != 0:
+                    cmap = mpl.cm.jet(np.linspace(0, 1, int(self.y.max())))
+                    cmap -= 0.4
+                    cmap = cmap.clip(0, 1)
+                    cmap = mpl.colors.ListedColormap(cmap)
+                else:
+                    cmap = "jet"
 
                 alpha = np.zeros(edge_slice.shape)
                 alpha[edge_slice > self.background_threshold] = 0.9
